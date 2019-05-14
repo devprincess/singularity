@@ -30,6 +30,7 @@ import (
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
 	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/net/html"
 )
 
 // PublicKeyType is the armor type for a PGP public key.
@@ -587,6 +588,49 @@ func SelectPrivKey(el openpgp.EntityList) (*openpgp.Entity, error) {
 	return el[i], nil
 }
 
+func getBody(doc *html.Node) (*html.Node, error) {
+	var b *html.Node
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "body" {
+			b = n
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
+	if b != nil {
+		return b, nil
+	}
+	return nil, errors.New("Missing <body> in the node tree")
+}
+
+func getKeyList(doc *html.Node) (*html.Node, error) {
+	var b *html.Node
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "pre" {
+			b = n
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
+	if b != nil {
+		return b, nil
+	}
+	return nil, errors.New("Missing <pre> in the node tree")
+}
+
+func renderNode(n *html.Node) string {
+	var buf bytes.Buffer
+	w := io.Writer(&buf)
+	html.Render(w, n)
+	return buf.String()
+}
+
 // SearchPubkey connects to a key server and searches for a specific key
 func SearchPubkey(search, keyserverURI, authToken string) error {
 
@@ -619,7 +663,19 @@ func SearchPubkey(search, keyserverURI, authToken string) error {
 		}
 	}
 
-	fmt.Printf("%v", keyText)
+	doc, _ := html.Parse(strings.NewReader(keyText))
+	bn, err := getBody(doc)
+
+	if err != nil {
+		return err
+	}
+
+	body := renderNode(bn)
+
+	//	docBody, _ := html.Parse(strings.NewReader(body))
+	//	pre, err := getKeyList(docBody)
+	fmt.Println(body)
+	//fmt.Printf("%v", keyText)
 
 	return nil
 }
