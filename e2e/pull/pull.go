@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,6 +23,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sylabs/singularity/e2e/internal/e2e"
 	"github.com/sylabs/singularity/internal/pkg/test"
+	"github.com/sylabs/singularity/internal/pkg/test/exec"
 	"github.com/sylabs/singularity/internal/pkg/util/uri"
 )
 
@@ -236,9 +236,12 @@ func imagePull(t *testing.T, imgURI, library, pullDir, imagePath string, force, 
 	argv = append(argv, imgURI)
 
 	cmd := fmt.Sprintf("%s %s", testenv.CmdPath, strings.Join(argv, " "))
-	out, err := exec.Command(testenv.CmdPath, argv...).CombinedOutput()
-
-	return cmd, out, err
+	runCmd := exec.Command(testenv.CmdPath, strings.Join(argv, " "))
+	out := runCmd.Run(t)
+	if out.Error != nil {
+		t.Fatalf("Failed to pull image: %+v", out.String())
+	}
+	return cmd, []byte(fmt.Sprintf("%v", out)), out.Error
 }
 
 func getImageNameFromURI(imgURI string) string {
@@ -263,11 +266,12 @@ func testPullCmd(t *testing.T) {
 		// this should use a temporary configuration directory
 		// (set via environment variable, maybe?)
 		argv := []string{"key", "pull", sylabsAdminFingerprint}
-		out, err := exec.Command(testenv.CmdPath, argv...).CombinedOutput()
-		if err != nil {
+		out := exec.Command(testenv.CmdPath, argv...).Run(t)
+
+		if out.Error != nil {
 			t.Fatalf("Cannot pull key %q: %+v\nCommand:\n%s %s\nOutput:\n%s\n",
 				sylabsAdminFingerprint,
-				err,
+				out.Error,
 				testenv.CmdPath, strings.Join(argv, " "),
 				out)
 		}
