@@ -25,6 +25,7 @@ import (
 	"github.com/sylabs/singularity/internal/pkg/test"
 	"github.com/sylabs/singularity/internal/pkg/test/exec"
 	"github.com/sylabs/singularity/internal/pkg/util/uri"
+	"gotest.tools/icmd"
 )
 
 type testingEnv struct {
@@ -210,6 +211,10 @@ var tests = []struct {
 	},
 }
 
+type Result struct {
+	*icmd.Result
+}
+
 func imagePull(t *testing.T, imgURI, library, pullDir, imagePath string, force, unauthenticated bool) (string, []byte, error) {
 	argv := []string{"pull"}
 
@@ -241,7 +246,7 @@ func imagePull(t *testing.T, imgURI, library, pullDir, imagePath string, force, 
 	if out.Error != nil {
 		t.Fatalf("Failed to pull image: %+v", out.String())
 	}
-	return cmd, []byte(fmt.Sprintf("%v", out)), out.Error
+	return cmd, out, out.Error
 }
 
 func getImageNameFromURI(imgURI string) string {
