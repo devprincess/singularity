@@ -44,6 +44,14 @@ var errPassphraseMismatch = errors.New("passphrases do not match")
 var errTooManyRetries = errors.New("too many retries while getting a passphrase")
 var errNotEncrypted = errors.New("key is not encrypted")
 
+type KeyExistsError struct {
+	fingerprint [20]byte
+}
+
+func (e *KeyExistsError) Error() string {
+	return fmt.Sprintf("the key with fingerprint %X already belongs to the keyring", e.fingerprint)
+}
+
 // AskQuestion prompts the user with a question and return the response
 func AskQuestion(format string, a ...interface{}) (string, error) {
 	fmt.Printf(format, a...)
@@ -333,6 +341,7 @@ func storePubKeyring(keys openpgp.EntityList) error {
 	f, err := os.OpenFile(PublicPath(), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
+<<<<<<< HEAD
 	}
 	defer f.Close()
 
@@ -341,6 +350,16 @@ func storePubKeyring(keys openpgp.EntityList) error {
 			return fmt.Errorf("could not store public key: %s", err)
 		}
 	}
+=======
+	}
+	defer f.Close()
+
+	for _, k := range keys {
+		if err := k.Serialize(f); err != nil {
+			return fmt.Errorf("could not store public key: %s", err)
+		}
+	}
+>>>>>>> a48413e3f5e4e105427d2ee16cc4750b363b4d2a
 
 	return nil
 }
@@ -832,8 +851,14 @@ func findEntityByFingerprint(entities openpgp.EntityList, fingerprint [20]byte) 
 	return nil
 }
 
+<<<<<<< HEAD
 // ImportPrivateKey Will import a private key
 func ImportPrivateKey(entity *openpgp.Entity) error {
+=======
+// importPrivateKey imports the specified openpgp Entity, which should
+// represent a private key. The entity is added to the private keyring.
+func importPrivateKey(entity *openpgp.Entity) error {
+>>>>>>> a48413e3f5e4e105427d2ee16cc4750b363b4d2a
 	// Load the local private keys as entitylist
 	privateEntityList, err := LoadPrivKeyring()
 	if err != nil {
@@ -841,8 +866,12 @@ func ImportPrivateKey(entity *openpgp.Entity) error {
 	}
 
 	if findEntityByFingerprint(privateEntityList, entity.PrimaryKey.Fingerprint) != nil {
+<<<<<<< HEAD
 		fmt.Printf("The key you want to add with fingerprint %X already belongs to the keyring\n", entity.PrimaryKey.Fingerprint)
 		return nil
+=======
+		return &KeyExistsError{fingerprint: entity.PrivateKey.Fingerprint}
+>>>>>>> a48413e3f5e4e105427d2ee16cc4750b363b4d2a
 	}
 
 	// Check if the key is encrypted, if it is, decrypt it
@@ -884,7 +913,12 @@ func ImportPrivateKey(entity *openpgp.Entity) error {
 	return nil
 }
 
+<<<<<<< HEAD
 // importPublicKey Will import a public key entity
+=======
+// importPublicKey imports the specified openpgp Entity, which should
+// represent a public key. The entity is added to the public keyring.
+>>>>>>> a48413e3f5e4e105427d2ee16cc4750b363b4d2a
 func importPublicKey(entity *openpgp.Entity) error {
 	// Load the local public keys as entitylist
 	publicEntityList, err := LoadPubKeyring()
@@ -893,8 +927,12 @@ func importPublicKey(entity *openpgp.Entity) error {
 	}
 
 	if findEntityByFingerprint(publicEntityList, entity.PrimaryKey.Fingerprint) != nil {
+<<<<<<< HEAD
 		fmt.Printf("The key you want to add with fingerprint %X already belongs to the keyring\n", entity.PrimaryKey.Fingerprint)
 		return nil
+=======
+		return &KeyExistsError{fingerprint: entity.PrimaryKey.Fingerprint}
+>>>>>>> a48413e3f5e4e105427d2ee16cc4750b363b4d2a
 	}
 
 	if err := appendPubKey(entity); err != nil {
@@ -905,8 +943,9 @@ func importPublicKey(entity *openpgp.Entity) error {
 	return nil
 }
 
-// ImportKey Will import a key from a file, and decied if its
-// a public, or private key.
+// ImportKey imports one or more keys from the specified file. The keys
+// can be either a public or private keys, and the file can be either in
+// binary or ascii-armored format.
 func ImportKey(kpath string) error {
 	// Load the private key as an entitylist
 	pathEntityList, err := loadKeysFromFile(kpath)
@@ -917,19 +956,34 @@ func ImportKey(kpath string) error {
 	for _, pathEntity := range pathEntityList {
 		if pathEntity.PrivateKey != nil {
 			// We have a private key
+<<<<<<< HEAD
 			err := ImportPrivateKey(pathEntity)
+=======
+			err := importPrivateKey(pathEntity)
+>>>>>>> a48413e3f5e4e105427d2ee16cc4750b363b4d2a
 			if err != nil {
 				return err
 			}
 
+			fmt.Printf("Key with fingerprint %X succesfully added to the private keyring\n",
+				pathEntity.PrivateKey.Fingerprint)
 		}
+<<<<<<< HEAD
 		// TODO(mem): else?
+=======
+
+		// There's no else here because a single entity can have
+		// both a private and public keys
+>>>>>>> a48413e3f5e4e105427d2ee16cc4750b363b4d2a
 		if pathEntity.PrimaryKey != nil {
 			// We have a public key
 			err := importPublicKey(pathEntity)
 			if err != nil {
 				return err
 			}
+
+			fmt.Printf("Key with fingerprint %X succesfully added to the public keyring\n",
+				pathEntity.PrimaryKey.Fingerprint)
 		}
 	}
 
